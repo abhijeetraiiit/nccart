@@ -10,7 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - Complete project structure with monorepo setup
 - Backend API with Express.js and TypeScript
-- Frontend with Next.js 14 and Tailwind CSS
+- Frontend with Next.js 15 and Tailwind CSS
 - Comprehensive database schema with Prisma ORM
 - Authentication system with JWT
 - User roles (Customer, Seller, Admin)
@@ -30,6 +30,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - SECURITY.md with security policy
 
 ### Security
+- **CRITICAL:** Updated multer from 1.4.5-lts.1 to 2.0.2 to fix multiple DoS vulnerabilities
+- **HIGH:** Updated nodemailer from 6.9.7 to 7.0.7 to fix email domain interpretation issue
+- **HIGH:** Updated Next.js from 14.0.4 to 15.0.8 to fix HTTP request deserialization DoS
 - Password hashing with bcrypt
 - JWT-based authentication
 - Input validation with express-validator
@@ -37,6 +40,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Rate limiting middleware
 - CORS configuration
 - Helmet.js security headers
+
+### Changed
+- Upgraded multer to v2.0.2 (breaking changes - see SECURITY-ADVISORY.md)
+- Upgraded nodemailer to v7.0.7 (breaking changes - see SECURITY-ADVISORY.md)
+- Upgraded Next.js to v15.0.8 (breaking changes - see SECURITY-ADVISORY.md)
 
 ## [0.1.0] - 2024-02-08
 
