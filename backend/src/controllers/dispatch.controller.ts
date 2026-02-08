@@ -170,13 +170,13 @@ export const getNearbyPartners = async (req: Request, res: Response) => {
       data: {
         count: partners.length,
         radius: radiusKm,
-        partners: partners.map(p => ({
-          id: p.id,
-          name: p.name,
-          partnerType: p.partnerType,
-          distance: p.distance,
-          rating: p.rating,
-          totalDeliveries: p.totalDeliveries,
+        partners: partners.filter(p => p !== null).map(p => ({
+          id: p!.id,
+          name: p!.name,
+          partnerType: p!.partnerType,
+          distance: p!.distance,
+          rating: p!.rating,
+          totalDeliveries: p!.totalDeliveries,
         })),
       },
     });
