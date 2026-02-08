@@ -1,7 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import { validationResult } from 'express-validator';
 import cartService from '../services/cart.service';
-import prisma from '../config/database';
 
 interface AuthRequest extends Request {
   user?: {
@@ -23,26 +22,20 @@ export class CartController {
         });
       }
 
-      // Get customer ID from user
-      const customer = await prisma.customer.findUnique({
-        where: { userId },
-        select: { id: true },
-      });
-
-      if (!customer) {
-        return res.status(404).json({
-          success: false,
-          message: 'Customer profile not found',
-        });
-      }
-
-      const cart = await cartService.getCart(customer.id);
+      const customerId = await cartService.getCustomerIdFromUserId(userId);
+      const cart = await cartService.getCart(customerId);
 
       res.json({
         success: true,
         data: cart,
       });
-    } catch (error) {
+    } catch (error: any) {
+      if (error.message === 'Customer profile not found') {
+        return res.status(404).json({
+          success: false,
+          message: error.message,
+        });
+      }
       next(error);
     }
   }
@@ -66,22 +59,11 @@ export class CartController {
         });
       }
 
-      const customer = await prisma.customer.findUnique({
-        where: { userId },
-        select: { id: true },
-      });
-
-      if (!customer) {
-        return res.status(404).json({
-          success: false,
-          message: 'Customer profile not found',
-        });
-      }
-
+      const customerId = await cartService.getCustomerIdFromUserId(userId);
       const { productId, quantity } = req.body;
 
       const cart = await cartService.addToCart(
-        customer.id,
+        customerId,
         productId,
         quantity
       );
@@ -92,6 +74,12 @@ export class CartController {
         data: cart,
       });
     } catch (error: any) {
+      if (error.message === 'Customer profile not found') {
+        return res.status(404).json({
+          success: false,
+          message: error.message,
+        });
+      }
       if (
         error.message === 'Product not found' ||
         error.message === 'Product is not available for purchase' ||
@@ -125,23 +113,12 @@ export class CartController {
         });
       }
 
-      const customer = await prisma.customer.findUnique({
-        where: { userId },
-        select: { id: true },
-      });
-
-      if (!customer) {
-        return res.status(404).json({
-          success: false,
-          message: 'Customer profile not found',
-        });
-      }
-
+      const customerId = await cartService.getCustomerIdFromUserId(userId);
       const { productId } = req.params;
       const { quantity } = req.body;
 
       const cart = await cartService.updateCartItem(
-        customer.id,
+        customerId,
         productId,
         quantity
       );
@@ -152,6 +129,12 @@ export class CartController {
         data: cart,
       });
     } catch (error: any) {
+      if (error.message === 'Customer profile not found') {
+        return res.status(404).json({
+          success: false,
+          message: error.message,
+        });
+      }
       if (
         error.message === 'Item not found in cart' ||
         error.message === 'Product not found' ||
@@ -177,21 +160,10 @@ export class CartController {
         });
       }
 
-      const customer = await prisma.customer.findUnique({
-        where: { userId },
-        select: { id: true },
-      });
-
-      if (!customer) {
-        return res.status(404).json({
-          success: false,
-          message: 'Customer profile not found',
-        });
-      }
-
+      const customerId = await cartService.getCustomerIdFromUserId(userId);
       const { productId } = req.params;
 
-      const cart = await cartService.removeFromCart(customer.id, productId);
+      const cart = await cartService.removeFromCart(customerId, productId);
 
       res.json({
         success: true,
@@ -199,6 +171,12 @@ export class CartController {
         data: cart,
       });
     } catch (error: any) {
+      if (error.message === 'Customer profile not found') {
+        return res.status(404).json({
+          success: false,
+          message: error.message,
+        });
+      }
       if (error.message === 'Item not found in cart') {
         return res.status(404).json({
           success: false,
@@ -220,26 +198,21 @@ export class CartController {
         });
       }
 
-      const customer = await prisma.customer.findUnique({
-        where: { userId },
-        select: { id: true },
-      });
-
-      if (!customer) {
-        return res.status(404).json({
-          success: false,
-          message: 'Customer profile not found',
-        });
-      }
-
-      const result = await cartService.clearCart(customer.id);
+      const customerId = await cartService.getCustomerIdFromUserId(userId);
+      const result = await cartService.clearCart(customerId);
 
       res.json({
         success: true,
         message: 'Cart cleared successfully',
         data: result,
       });
-    } catch (error) {
+    } catch (error: any) {
+      if (error.message === 'Customer profile not found') {
+        return res.status(404).json({
+          success: false,
+          message: error.message,
+        });
+      }
       next(error);
     }
   }
@@ -255,25 +228,20 @@ export class CartController {
         });
       }
 
-      const customer = await prisma.customer.findUnique({
-        where: { userId },
-        select: { id: true },
-      });
-
-      if (!customer) {
-        return res.status(404).json({
-          success: false,
-          message: 'Customer profile not found',
-        });
-      }
-
-      const total = await cartService.getCartTotal(customer.id);
+      const customerId = await cartService.getCustomerIdFromUserId(userId);
+      const total = await cartService.getCartTotal(customerId);
 
       res.json({
         success: true,
         data: total,
       });
-    } catch (error) {
+    } catch (error: any) {
+      if (error.message === 'Customer profile not found') {
+        return res.status(404).json({
+          success: false,
+          message: error.message,
+        });
+      }
       next(error);
     }
   }
@@ -289,25 +257,20 @@ export class CartController {
         });
       }
 
-      const customer = await prisma.customer.findUnique({
-        where: { userId },
-        select: { id: true },
-      });
-
-      if (!customer) {
-        return res.status(404).json({
-          success: false,
-          message: 'Customer profile not found',
-        });
-      }
-
-      const validation = await cartService.validateCart(customer.id);
+      const customerId = await cartService.getCustomerIdFromUserId(userId);
+      const validation = await cartService.validateCart(customerId);
 
       res.json({
         success: true,
         data: validation,
       });
-    } catch (error) {
+    } catch (error: any) {
+      if (error.message === 'Customer profile not found') {
+        return res.status(404).json({
+          success: false,
+          message: error.message,
+        });
+      }
       next(error);
     }
   }

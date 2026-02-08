@@ -42,6 +42,20 @@ class CartStore {
 const cartStore = new CartStore();
 
 export class CartService {
+  // Helper method to get customer ID from user ID
+  async getCustomerIdFromUserId(userId: string): Promise<string> {
+    const customer = await prisma.customer.findUnique({
+      where: { userId },
+      select: { id: true },
+    });
+
+    if (!customer) {
+      throw new Error('Customer profile not found');
+    }
+
+    return customer.id;
+  }
+
   // Add item to cart
   async addToCart(customerId: string, productId: string, quantity: number) {
     if (quantity <= 0) {
@@ -159,10 +173,10 @@ export class CartService {
           addedAt: cartItem.addedAt,
         };
       })
-      .filter((item) => item !== null);
+      .filter((item): item is NonNullable<typeof item> => item !== null);
 
-    const total = items.reduce((sum, item) => sum + item!.subtotal, 0);
-    const itemCount = items.reduce((sum, item) => sum + item!.quantity, 0);
+    const total = items.reduce((sum, item) => sum + item.subtotal, 0);
+    const itemCount = items.reduce((sum, item) => sum + item.quantity, 0);
 
     return {
       customerId,
