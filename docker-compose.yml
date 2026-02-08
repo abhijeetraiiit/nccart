@@ -1,0 +1,81 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:14-alpine
+    container_name: nccart-postgres
+    environment:
+      POSTGRES_USER: nccart
+      POSTGRES_PASSWORD: nccart_dev_password
+      POSTGRES_DB: nccart
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    networks:
+      - nccart-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U nccart"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: nccart-redis
+    ports:
+      - "6379:6379"
+    networks:
+      - nccart-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: nccart-backend
+    ports:
+      - "5000:5000"
+    environment:
+      DATABASE_URL: postgresql://nccart:nccart_dev_password@postgres:5432/nccart?schema=public
+      REDIS_URL: redis://redis:6379
+      JWT_SECRET: dev-jwt-secret-change-in-production-minimum-32-chars
+      NODE_ENV: development
+      PORT: 5000
+      BACKEND_URL: http://localhost:5000
+      FRONTEND_URL: http://localhost:3000
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - nccart-network
+    volumes:
+      - ./backend/logs:/app/logs
+    command: sh -c "npx prisma migrate deploy && npm start"
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: nccart-frontend
+    ports:
+      - "3000:3000"
+    environment:
+      NEXT_PUBLIC_API_URL: http://localhost:5000/api
+    depends_on:
+      - backend
+    networks:
+      - nccart-network
+
+volumes:
+  postgres_data:
+
+networks:
+  nccart-network:
+    driver: bridge

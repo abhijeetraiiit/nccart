@@ -1,0 +1,454 @@
+// This is your Prisma schema file
+// Learn more: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================
+// USER MANAGEMENT
+// ============================================
+
+enum UserRole {
+  CUSTOMER
+  SELLER
+  ADMIN
+}
+
+enum UserStatus {
+  ACTIVE
+  INACTIVE
+  SUSPENDED
+  PENDING_VERIFICATION
+}
+
+model User {
+  id            String      @id @default(uuid())
+  email         String      @unique
+  phone         String?     @unique
+  password      String
+  role          UserRole    @default(CUSTOMER)
+  status        UserStatus  @default(PENDING_VERIFICATION)
+  emailVerified Boolean     @default(false)
+  phoneVerified Boolean     @default(false)
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+  
+  // Relations
+  customer      Customer?
+  seller        Seller?
+  addresses     Address[]
+  orders        Order[]
+  reviews       Review[]
+  wishlists     Wishlist[]
+  
+  @@index([email])
+  @@index([phone])
+  @@index([role])
+}
+
+model Customer {
+  id        String   @id @default(uuid())
+  userId    String   @unique
+  firstName String
+  lastName  String
+  avatar    String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@index([userId])
+}
+
+// ============================================
+// SELLER MANAGEMENT
+// ============================================
+
+enum SellerType {
+  INDIVIDUAL
+  BUSINESS
+}
+
+enum SellerStatus {
+  PENDING_APPROVAL
+  ACTIVE
+  SUSPENDED
+  REJECTED
+}
+
+enum KYCStatus {
+  NOT_SUBMITTED
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+model Seller {
+  id                String        @id @default(uuid())
+  userId            String        @unique
+  businessName      String
+  displayName       String
+  description       String?
+  logo              String?
+  type              SellerType    @default(INDIVIDUAL)
+  status            SellerStatus  @default(PENDING_APPROVAL)
+  
+  // KYC Information
+  kycStatus         KYCStatus     @default(NOT_SUBMITTED)
+  panNumber         String?       @unique
+  panDocument       String?
+  aadhaarNumber     String?       @unique
+  aadhaarDocument   String?
+  gstNumber         String?       @unique
+  gstCertificate    String?
+  fssaiLicense      String?
+  
+  // Business Details
+  businessAddress   String?
+  pickupAddress     String?
+  bankAccountNumber String?
+  bankIfscCode      String?
+  bankAccountHolder String?
+  
+  // Trial & Fees
+  trialStartDate    DateTime      @default(now())
+  trialEndDate      DateTime
+  isTrialActive     Boolean       @default(true)
+  platformFeesPaid  Float         @default(0)
+  
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+  
+  user              User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  products          Product[]
+  orders            OrderItem[]
+  analytics         SellerAnalytics?
+  
+  @@index([userId])
+  @@index([status])
+  @@index([kycStatus])
+}
+
+model SellerAnalytics {
+  id              String   @id @default(uuid())
+  sellerId        String   @unique
+  totalProducts   Int      @default(0)
+  totalOrders     Int      @default(0)
+  totalRevenue    Float    @default(0)
+  totalPlatformFees Float  @default(0)
+  rating          Float?
+  totalReviews    Int      @default(0)
+  updatedAt       DateTime @updatedAt
+  
+  seller          Seller   @relation(fields: [sellerId], references: [id], onDelete: Cascade)
+}
+
+// ============================================
+// PRODUCT CATALOG
+// ============================================
+
+enum ProductStatus {
+  DRAFT
+  ACTIVE
+  OUT_OF_STOCK
+  DISCONTINUED
+}
+
+model Category {
+  id          String      @id @default(uuid())
+  name        String      @unique
+  slug        String      @unique
+  description String?
+  image       String?
+  parentId    String?
+  isActive    Boolean     @default(true)
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+  
+  parent      Category?   @relation("CategoryHierarchy", fields: [parentId], references: [id])
+  children    Category[]  @relation("CategoryHierarchy")
+  products    Product[]
+  
+  @@index([slug])
+  @@index([parentId])
+}
+
+model Product {
+  id              String          @id @default(uuid())
+  sellerId        String
+  categoryId      String
+  name            String
+  slug            String          @unique
+  description     String
+  shortDescription String?
+  
+  // Pricing
+  price           Float
+  mrp             Float
+  discount        Float           @default(0)
+  
+  // Inventory
+  sku             String          @unique
+  stock           Int             @default(0)
+  lowStockAlert   Int             @default(10)
+  
+  // Details
+  images          String[]
+  specifications  Json?
+  countryOfOrigin String          @default("India")
+  hsn             String?
+  weight          Float?          // in kg
+  dimensions      Json?           // {length, width, height} in cm
+  
+  status          ProductStatus   @default(DRAFT)
+  isFeatured      Boolean         @default(false)
+  viewCount       Int             @default(0)
+  
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+  
+  seller          Seller          @relation(fields: [sellerId], references: [id], onDelete: Cascade)
+  category        Category        @relation(fields: [categoryId], references: [id])
+  reviews         Review[]
+  orderItems      OrderItem[]
+  wishlists       Wishlist[]
+  
+  @@index([sellerId])
+  @@index([categoryId])
+  @@index([slug])
+  @@index([status])
+  @@index([name])
+}
+
+// ============================================
+// ORDERS & PAYMENTS
+// ============================================
+
+enum OrderStatus {
+  PENDING
+  CONFIRMED
+  PROCESSING
+  SHIPPED
+  DELIVERED
+  CANCELLED
+  REFUNDED
+}
+
+enum PaymentStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+  REFUNDED
+}
+
+enum PaymentMethod {
+  UPI
+  CARD
+  NETBANKING
+  WALLET
+  COD
+}
+
+model Order {
+  id                String          @id @default(uuid())
+  userId            String
+  orderNumber       String          @unique
+  
+  // Address
+  shippingAddressId String
+  billingAddressId  String
+  
+  // Pricing
+  subtotal          Float
+  deliveryCharge    Float
+  tax               Float
+  discount          Float           @default(0)
+  total             Float
+  
+  // Payment
+  paymentMethod     PaymentMethod
+  paymentStatus     PaymentStatus   @default(PENDING)
+  paymentId         String?
+  
+  // Status
+  status            OrderStatus     @default(PENDING)
+  
+  // Delivery
+  deliveryPartner   String?
+  trackingNumber    String?
+  estimatedDelivery DateTime?
+  deliveredAt       DateTime?
+  
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+  
+  user              User            @relation(fields: [userId], references: [id])
+  shippingAddress   Address         @relation("ShippingAddress", fields: [shippingAddressId], references: [id])
+  billingAddress    Address         @relation("BillingAddress", fields: [billingAddressId], references: [id])
+  items             OrderItem[]
+  
+  @@index([userId])
+  @@index([orderNumber])
+  @@index([status])
+  @@index([createdAt])
+}
+
+model OrderItem {
+  id          String      @id @default(uuid())
+  orderId     String
+  productId   String
+  sellerId    String
+  
+  quantity    Int
+  price       Float       // Price at time of order
+  discount    Float       @default(0)
+  tax         Float
+  subtotal    Float
+  
+  createdAt   DateTime    @default(now())
+  
+  order       Order       @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product     Product     @relation(fields: [productId], references: [id])
+  seller      Seller      @relation(fields: [sellerId], references: [id])
+  
+  @@index([orderId])
+  @@index([productId])
+  @@index([sellerId])
+}
+
+// ============================================
+// ADDRESSES
+// ============================================
+
+enum AddressType {
+  HOME
+  WORK
+  OTHER
+}
+
+model Address {
+  id          String      @id @default(uuid())
+  userId      String
+  type        AddressType @default(HOME)
+  
+  fullName    String
+  phone       String
+  addressLine1 String
+  addressLine2 String?
+  landmark    String?
+  city        String
+  state       String
+  pincode     String
+  country     String      @default("India")
+  
+  isDefault   Boolean     @default(false)
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+  
+  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  shippingOrders Order[]  @relation("ShippingAddress")
+  billingOrders  Order[]  @relation("BillingAddress")
+  
+  @@index([userId])
+  @@index([pincode])
+}
+
+// ============================================
+// REVIEWS & RATINGS
+// ============================================
+
+model Review {
+  id          String   @id @default(uuid())
+  userId      String
+  productId   String
+  
+  rating      Int      // 1-5
+  title       String?
+  comment     String
+  images      String[]
+  
+  isVerified  Boolean  @default(false)
+  helpfulCount Int     @default(0)
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  product     Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  
+  @@unique([userId, productId])
+  @@index([productId])
+  @@index([rating])
+}
+
+// ============================================
+// WISHLIST
+// ============================================
+
+model Wishlist {
+  id          String   @id @default(uuid())
+  userId      String
+  productId   String
+  createdAt   DateTime @default(now())
+  
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  product     Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  
+  @@unique([userId, productId])
+  @@index([userId])
+}
+
+// ============================================
+// DELIVERY PARTNERS
+// ============================================
+
+enum DeliveryPartnerStatus {
+  ACTIVE
+  INACTIVE
+}
+
+model DeliveryPartner {
+  id              String                @id @default(uuid())
+  name            String                @unique
+  displayName     String
+  logo            String?
+  apiKey          String?
+  apiSecret       String?
+  webhookUrl      String?
+  status          DeliveryPartnerStatus @default(ACTIVE)
+  
+  // Performance metrics
+  averageRating   Float                 @default(0)
+  successRate     Float                 @default(100)
+  
+  // Pricing weight (for algorithm)
+  priceWeight     Float                 @default(0.5)
+  speedWeight     Float                 @default(0.3)
+  reliabilityWeight Float               @default(0.2)
+  
+  createdAt       DateTime              @default(now())
+  updatedAt       DateTime              @updatedAt
+  
+  @@index([status])
+}
+
+// ============================================
+// PLATFORM SETTINGS
+// ============================================
+
+model PlatformSettings {
+  id                  String   @id @default(uuid())
+  key                 String   @unique
+  value               String
+  description         String?
+  updatedAt           DateTime @updatedAt
+  
+  @@index([key])
+}
