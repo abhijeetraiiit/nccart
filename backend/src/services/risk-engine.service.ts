@@ -18,6 +18,12 @@ interface BuyerProfile {
  * Implements enterprise risk engine to prevent RTO (Return to Origin) losses
  */
 export class RiskEngine {
+  // Scoring weights (configurable)
+  private readonly ORDER_COMPLETION_WEIGHT = 0.6;
+  private readonly PINCODE_RISK_WEIGHT = 0.3;
+  private readonly ACCOUNT_MATURITY_WEIGHT = 0.1;
+  private readonly CANCELLATION_PENALTY_PER_ORDER = 0.05;
+
   /**
    * Calculate Buyer Trust Score (BTS)
    * 
@@ -31,22 +37,22 @@ export class RiskEngine {
    * @returns Trust score between 0 and 1
    */
   public calculateTrustScore(profile: BuyerProfile): number {
-    // Order completion rate (60% weight)
+    // Order completion rate
     const deliverySuccess = profile.totalOrders > 0
       ? (profile.totalOrders - profile.returnedOrders) / profile.totalOrders
       : 0.5; // Default for new users
     
     // Cancellation penalty
-    const cancellationPenalty = profile.cancelledOrders * 0.05;
+    const cancellationPenalty = profile.cancelledOrders * this.CANCELLATION_PENALTY_PER_ORDER;
     
-    // Account maturity (10% weight) - normalized to 1 year
+    // Account maturity - normalized to 1 year
     const accountMaturity = Math.min(profile.accountAgeDays / 365, 1);
     
     // Calculate weighted score
     let score = 
-      (deliverySuccess * 0.6) -
-      (profile.pincodeRisk * 0.3) +
-      (accountMaturity * 0.1) -
+      (deliverySuccess * this.ORDER_COMPLETION_WEIGHT) -
+      (profile.pincodeRisk * this.PINCODE_RISK_WEIGHT) +
+      (accountMaturity * this.ACCOUNT_MATURITY_WEIGHT) -
       cancellationPenalty;
     
     // Clamp between 0 and 1

@@ -49,12 +49,12 @@ export const assignDeliveryPartner = async (req: Request, res: Response) => {
     const result = await smartDispatchEngine.smartDispatch(
       orderId,
       {
-        latitude: parseFloat(vendorLocation.latitude),
-        longitude: parseFloat(vendorLocation.longitude),
+        latitude: vendorLocation.latitude,
+        longitude: vendorLocation.longitude,
       },
       {
-        latitude: parseFloat(customerLocation.latitude),
-        longitude: parseFloat(customerLocation.longitude),
+        latitude: customerLocation.latitude,
+        longitude: customerLocation.longitude,
       }
     );
 

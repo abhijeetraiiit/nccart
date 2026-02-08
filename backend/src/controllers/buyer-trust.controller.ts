@@ -59,7 +59,8 @@ export const getBuyerTrustScore = async (req: Request, res: Response) => {
           totalOrders: customer.totalOrders,
           returnedOrders: customer.returnedOrders,
           cancelledOrders: customer.cancelledOrders,
-          successRate: successRate.toFixed(2) + '%',
+          successRate: parseFloat(successRate.toFixed(2)),
+          successRateFormatted: successRate.toFixed(2) + '%',
           accountAgeDays,
         },
         lastUpdated: customer.lastScoreUpdate,
@@ -206,6 +207,8 @@ export const getPincodeRisk = async (req: Request, res: Response) => {
       ? 'MEDIUM'
       : 'LOW';
 
+    const returnRate = (riskData.returnedOrders / riskData.totalOrders) * 100;
+
     return res.json({
       success: true,
       data: {
@@ -216,7 +219,8 @@ export const getPincodeRisk = async (req: Request, res: Response) => {
           totalOrders: riskData.totalOrders,
           returnedOrders: riskData.returnedOrders,
           cancelledOrders: riskData.cancelledOrders,
-          returnRate: ((riskData.returnedOrders / riskData.totalOrders) * 100).toFixed(2) + '%',
+          returnRate: parseFloat(returnRate.toFixed(2)),
+          returnRateFormatted: returnRate.toFixed(2) + '%',
         },
         lastUpdated: riskData.lastUpdated,
       },

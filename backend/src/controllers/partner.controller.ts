@@ -6,6 +6,24 @@ import { AuthRequest } from '../middleware/auth';
 const prisma = new PrismaClient();
 
 /**
+ * Partner earnings configuration
+ */
+const EARNINGS_CONFIG = {
+  COMMISSION_RATE: 0.05, // 5% commission
+  MAX_EARNING_CAP: 100,  // ₹100 maximum per delivery
+};
+
+/**
+ * Calculate estimated partner earnings
+ */
+function calculateEstimatedEarnings(orderTotal: number): number {
+  return Math.min(
+    orderTotal * EARNINGS_CONFIG.COMMISSION_RATE,
+    EARNINGS_CONFIG.MAX_EARNING_CAP
+  );
+}
+
+/**
  * Partner Registration Controller
  * Handles delivery partner onboarding with KYC
  */
@@ -91,8 +109,8 @@ export const updateLocation = async (req: Request, res: Response) => {
     const partner = await prisma.deliveryPartner.update({
       where: { id },
       data: {
-        currentLatitude: parseFloat(latitude),
-        currentLongitude: parseFloat(longitude),
+        currentLatitude: latitude,
+        currentLongitude: longitude,
         lastLocationUpdate: new Date(),
       },
     });
@@ -222,7 +240,7 @@ export const getAvailableOrders = async (req: Request, res: Response) => {
           longitude: order.deliveryLongitude,
         },
         deliveryAddress: order.shippingAddress,
-        estimatedEarnings: Math.min(order.total * 0.05, 100), // Example calculation
+        estimatedEarnings: calculateEstimatedEarnings(order.total),
         items: order.items.length,
       })),
     });

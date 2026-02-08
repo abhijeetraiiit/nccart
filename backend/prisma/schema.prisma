@@ -474,8 +474,8 @@ model DeliveryPartner {
   aadhaarVerified Boolean               @default(false)
   kycStatus       KYCVerificationStatus @default(NOT_VERIFIED)
   
-  // Location (stored as String, use PostGIS in production)
-  // Format: "latitude,longitude" e.g., "28.6139,77.2090"
+  // Location (stored as separate Float fields for lat/lon)
+  // In production with PostGIS: Use GEOGRAPHY(POINT, 4326) type
   currentLatitude  Float?
   currentLongitude Float?
   lastLocationUpdate DateTime?
