@@ -334,27 +334,22 @@ export class OrderController {
 
   // Helper method to get seller from user ID
   private async getSellerFromUserId(userId: string) {
-    const { PrismaClient } = require('@prisma/client');
-    const prisma = new PrismaClient();
+    const prisma = require('../config/database').default;
 
-    try {
-      const seller = await prisma.seller.findUnique({
-        where: { userId },
-        select: { id: true, businessName: true, status: true },
-      });
+    const seller = await prisma.seller.findUnique({
+      where: { userId },
+      select: { id: true, businessName: true, status: true },
+    });
 
-      if (!seller) {
-        return null;
-      }
-
-      if (seller.status !== 'ACTIVE') {
-        throw new Error('Seller account is not active');
-      }
-
-      return seller;
-    } finally {
-      await prisma.$disconnect();
+    if (!seller) {
+      return null;
     }
+
+    if (seller.status !== 'ACTIVE') {
+      throw new Error('Seller account is not active');
+    }
+
+    return seller;
   }
 }
 
