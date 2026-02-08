@@ -10,6 +10,14 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+// Note: For PostGIS support, use:
+// datasource db {
+//   provider = "postgresql"
+//   url      = env("DATABASE_URL")
+//   extensions = [postgis]
+// }
+// And ensure PostGIS extension is installed: CREATE EXTENSION IF NOT EXISTS postgis;
+
 // ============================================
 // USER MANAGEMENT
 // ============================================
@@ -53,17 +61,26 @@ model User {
 }
 
 model Customer {
-  id        String   @id @default(uuid())
-  userId    String   @unique
-  firstName String
-  lastName  String
-  avatar    String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id               String   @id @default(uuid())
+  userId           String   @unique
+  firstName        String
+  lastName         String
+  avatar           String?
   
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  // Buyer Trust Score fields
+  totalOrders      Int      @default(0)
+  returnedOrders   Int      @default(0)
+  cancelledOrders  Int      @default(0)
+  trustScore       Float    @default(0.5)
+  lastScoreUpdate  DateTime @default(now())
+  
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+  
+  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   
   @@index([userId])
+  @@index([trustScore])
 }
 
 // ============================================
@@ -254,6 +271,8 @@ enum PaymentMethod {
   NETBANKING
   WALLET
   COD
+  COD_WITH_DEPOSIT
+  BNPL
 }
 
 model Order {
@@ -271,6 +290,7 @@ model Order {
   tax               Float
   discount          Float           @default(0)
   total             Float
+  commitmentFee     Float           @default(0)
   
   // Payment
   paymentMethod     PaymentMethod
@@ -281,23 +301,32 @@ model Order {
   status            OrderStatus     @default(PENDING)
   
   // Delivery
-  deliveryPartner   String?
-  trackingNumber    String?
-  estimatedDelivery DateTime?
-  deliveredAt       DateTime?
+  deliveryPartner      String?
+  deliveryPartnerId    String?
+  trackingNumber       String?
+  estimatedDelivery    DateTime?
+  deliveredAt          DateTime?
   
-  createdAt         DateTime        @default(now())
-  updatedAt         DateTime        @updatedAt
+  // Delivery location coordinates
+  deliveryLatitude     Float?
+  deliveryLongitude    Float?
+  pickupLatitude       Float?
+  pickupLongitude      Float?
   
-  user              User            @relation(fields: [userId], references: [id])
-  shippingAddress   Address         @relation("ShippingAddress", fields: [shippingAddressId], references: [id])
-  billingAddress    Address         @relation("BillingAddress", fields: [billingAddressId], references: [id])
-  items             OrderItem[]
+  createdAt            DateTime        @default(now())
+  updatedAt            DateTime        @updatedAt
+  
+  user                 User            @relation(fields: [userId], references: [id])
+  shippingAddress      Address         @relation("ShippingAddress", fields: [shippingAddressId], references: [id])
+  billingAddress       Address         @relation("BillingAddress", fields: [billingAddressId], references: [id])
+  items                OrderItem[]
+  partner              DeliveryPartner? @relation("PartnerDeliveries", fields: [deliveryPartnerId], references: [id])
   
   @@index([userId])
   @@index([orderNumber])
   @@index([status])
   @@index([createdAt])
+  @@index([deliveryPartnerId])
 }
 
 model OrderItem {
@@ -406,7 +435,7 @@ model Wishlist {
 }
 
 // ============================================
-// DELIVERY PARTNERS
+// DELIVERY PARTNERS & ELASTIC LOGISTICS MESH
 // ============================================
 
 enum DeliveryPartnerStatus {
@@ -414,29 +443,181 @@ enum DeliveryPartnerStatus {
   INACTIVE
 }
 
+enum PartnerType {
+  WALKER
+  BIKE
+  EV
+  NATIONAL_COURIER
+}
+
+enum KYCVerificationStatus {
+  NOT_VERIFIED
+  PENDING
+  VERIFIED
+  REJECTED
+}
+
+// Individual delivery partners (Walkers, Gig workers)
 model DeliveryPartner {
   id              String                @id @default(uuid())
-  name            String                @unique
-  displayName     String
-  logo            String?
-  apiKey          String?
-  apiSecret       String?
-  webhookUrl      String?
-  status          DeliveryPartnerStatus @default(ACTIVE)
+  name            String
+  phone           String                @unique
+  email           String?
+  
+  // Partner Type
+  partnerType     PartnerType           @default(WALKER)
+  status          DeliveryPartnerStatus @default(INACTIVE)
+  
+  // KYC Information
+  aadhaarNumber   String?               @unique
+  aadhaarDocument String?
+  aadhaarVerified Boolean               @default(false)
+  kycStatus       KYCVerificationStatus @default(NOT_VERIFIED)
+  
+  // Location (stored as separate Float fields for lat/lon)
+  // In production with PostGIS: Use GEOGRAPHY(POINT, 4326) type
+  currentLatitude  Float?
+  currentLongitude Float?
+  lastLocationUpdate DateTime?
+  
+  // Availability
+  isAvailable     Boolean               @default(false)
+  availableFrom   DateTime?
+  availableTo     DateTime?
   
   // Performance metrics
-  averageRating   Float                 @default(0)
-  successRate     Float                 @default(100)
+  rating          Float                 @default(0)
+  totalDeliveries Int                   @default(0)
+  successfulDeliveries Int              @default(0)
+  totalEarnings   Float                 @default(0)
   
-  // Pricing weight (for algorithm)
-  priceWeight     Float                 @default(0.5)
-  speedWeight     Float                 @default(0.3)
-  reliabilityWeight Float               @default(0.2)
+  // Gamification
+  badges          String[]              @default([])
+  level           Int                   @default(1)
   
   createdAt       DateTime              @default(now())
   updatedAt       DateTime              @updatedAt
   
+  // Relations
+  dispatchLogs    DispatchLog[]
+  deliveries      Order[]               @relation("PartnerDeliveries")
+  
+  @@index([phone])
+  @@index([partnerType])
   @@index([status])
+  @@index([isAvailable])
+  @@index([currentLatitude, currentLongitude])
+}
+
+// National courier partners (Delhivery, Shiprocket, etc.)
+model CourierPartner {
+  id                String                @id @default(uuid())
+  name              String                @unique
+  displayName       String
+  logo              String?
+  apiKey            String?
+  apiSecret         String?
+  webhookUrl        String?
+  status            DeliveryPartnerStatus @default(ACTIVE)
+  
+  // Performance metrics
+  averageRating     Float                 @default(0)
+  successRate       Float                 @default(100)
+  
+  // Pricing weight (for algorithm)
+  priceWeight       Float                 @default(0.5)
+  speedWeight       Float                 @default(0.3)
+  reliabilityWeight Float                 @default(0.2)
+  
+  createdAt         DateTime              @default(now())
+  updatedAt         DateTime              @updatedAt
+  
+  @@index([status])
+}
+
+// Dispatch logs for smart dispatch tracking
+enum DispatchStage {
+  MESH           // Stage 1: Neighborhood walkers
+  GIG            // Stage 2: Gig pool (bike/EV)
+  COURIER        // Stage 3: National courier
+}
+
+model DispatchLog {
+  id                   String         @id @default(uuid())
+  orderId              String
+  partnerId            String?
+  
+  // Dispatch details
+  stage                DispatchStage
+  pingedAt             DateTime       @default(now())
+  respondedAt          DateTime?
+  accepted             Boolean        @default(false)
+  responseTimeSeconds  Int?
+  
+  // Location at ping time
+  vendorLatitude       Float?
+  vendorLongitude      Float?
+  customerLatitude     Float?
+  customerLongitude    Float?
+  distanceKm           Float?
+  
+  createdAt            DateTime       @default(now())
+  
+  // Relations
+  partner              DeliveryPartner? @relation(fields: [partnerId], references: [id])
+  
+  @@index([orderId])
+  @@index([partnerId])
+  @@index([stage])
+  @@index([accepted])
+  @@index([pingedAt])
+}
+
+// Pincode risk mapping for RTO prevention
+model PincodeRisk {
+  id              String   @id @default(uuid())
+  pincode         String   @unique
+  
+  // Risk metrics
+  riskScore       Float    @default(0.5)  // 0 (Safe) to 1 (High Risk)
+  totalOrders     Int      @default(0)
+  returnedOrders  Int      @default(0)
+  cancelledOrders Int      @default(0)
+  
+  // Location info
+  city            String?
+  state           String?
+  region          String?
+  
+  lastUpdated     DateTime @default(now())
+  createdAt       DateTime @default(now())
+  
+  @@index([pincode])
+  @@index([riskScore])
+}
+
+// Vendor inventory with location
+model VendorInventory {
+  id               String   @id @default(uuid())
+  vendorId         String
+  productId        String
+  
+  // Inventory
+  quantity         Int
+  lowStockAlert    Int      @default(10)
+  
+  // Shop location (for geospatial queries)
+  shopLatitude     Float?
+  shopLongitude    Float?
+  shopAddress      String?
+  
+  lastUpdated      DateTime @default(now())
+  createdAt        DateTime @default(now())
+  
+  @@unique([vendorId, productId])
+  @@index([vendorId])
+  @@index([productId])
+  @@index([shopLatitude, shopLongitude])
 }
 
 // ============================================

@@ -12,6 +12,9 @@ import orderRoutes from './routes/order.routes';
 import categoryRoutes from './routes/category.routes';
 import adminRoutes from './routes/admin.routes';
 import cartRoutes from './routes/cart.routes';
+import partnerRoutes from './routes/partner.routes';
+import dispatchRoutes from './routes/dispatch.routes';
+import buyerTrustRoutes from './routes/buyer-trust.routes';
 
 // Load environment variables
 dotenv.config();
@@ -41,6 +44,9 @@ app.use('/api/orders', orderRoutes);
 app.use('/api/categories', categoryRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/cart', cartRoutes);
+app.use('/api/partners', partnerRoutes);
+app.use('/api/dispatch', dispatchRoutes);
+app.use('/api/buyers', buyerTrustRoutes);
 
 // Error handling
 app.use(errorHandler);
@@ -49,6 +55,9 @@ app.use(errorHandler);
 app.listen(PORT, () => {
   logger.info(`🚀 NCCart API server running on port ${PORT}`);
   logger.info(`Environment: ${process.env.NODE_ENV || 'development'}`);
+  logger.info(`✓ Smart Dispatch Engine loaded`);
+  logger.info(`✓ Buyer Trust Score Engine loaded`);
+  logger.info(`✓ Delivery Partner API ready`);
 });
 
 export default app;
