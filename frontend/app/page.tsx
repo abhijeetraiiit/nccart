@@ -58,13 +58,19 @@ export default function Home() {
             <div className="mt-8 pt-8 border-t border-gray-200">
               <h3 className="text-xl font-semibold mb-4">Quick Links</h3>
               <div className="grid grid-cols-2 gap-4">
-                <a href="/login" className="bg-indigo-600 text-white px-6 py-3 rounded-lg hover:bg-indigo-700 transition">
+                <a href="/products" className="bg-indigo-600 text-white px-6 py-3 rounded-lg hover:bg-indigo-700 transition">
+                  Browse Products
+                </a>
+                <a href="/cart" className="bg-green-600 text-white px-6 py-3 rounded-lg hover:bg-green-700 transition">
+                  Shopping Cart
+                </a>
+                <a href="/login" className="border-2 border-indigo-600 text-indigo-600 px-6 py-3 rounded-lg hover:bg-indigo-50 transition">
                   Customer Login
                 </a>
-                <a href="/seller/login" className="bg-green-600 text-white px-6 py-3 rounded-lg hover:bg-green-700 transition">
+                <a href="/seller/login" className="border-2 border-green-600 text-green-600 px-6 py-3 rounded-lg hover:bg-green-50 transition">
                   Seller Login
                 </a>
-                <a href="/register" className="border-2 border-indigo-600 text-indigo-600 px-6 py-3 rounded-lg hover:bg-indigo-50 transition">
+                <a href="/register" className="border-2 border-gray-600 text-gray-600 px-6 py-3 rounded-lg hover:bg-gray-50 transition">
                   Register
                 </a>
                 <a href="/admin" className="border-2 border-gray-600 text-gray-600 px-6 py-3 rounded-lg hover:bg-gray-50 transition">
