@@ -179,6 +179,230 @@ Get details of a specific product.
 
 ---
 
+## Cart Endpoints
+
+### Get User's Cart
+Get the current user's shopping cart with product details.
+
+**Endpoint:** `GET /cart`
+
+**Headers:** `Authorization: Bearer <token>`
+
+**Response:** `200 OK`
+```json
+{
+  "success": true,
+  "data": {
+    "customerId": "customer-uuid",
+    "items": [
+      {
+        "product": {
+          "id": "product-uuid",
+          "name": "Product Name",
+          "slug": "product-slug",
+          "price": 999.99,
+          "mrp": 1299.99,
+          "discount": 23,
+          "stock": 50,
+          "status": "ACTIVE",
+          "images": ["image1.jpg", "image2.jpg"],
+          "seller": {
+            "id": "seller-uuid",
+            "businessName": "Seller Store"
+          }
+        },
+        "quantity": 2,
+        "subtotal": 1999.98,
+        "addedAt": "2024-02-08T12:00:00Z"
+      }
+    ],
+    "total": 1999.98,
+    "itemCount": 2,
+    "updatedAt": "2024-02-08T12:00:00Z"
+  }
+}
+```
+
+### Add Item to Cart
+Add a product to the shopping cart.
+
+**Endpoint:** `POST /cart`
+
+**Headers:** `Authorization: Bearer <token>`
+
+**Request Body:**
+```json
+{
+  "productId": "product-uuid",
+  "quantity": 2
+}
+```
+
+**Response:** `201 Created`
+```json
+{
+  "success": true,
+  "message": "Item added to cart successfully",
+  "data": {
+    "customerId": "customer-uuid",
+    "items": [...],
+    "total": 1999.98,
+    "itemCount": 2,
+    "updatedAt": "2024-02-08T12:00:00Z"
+  }
+}
+```
+
+**Error Responses:**
+- `400 Bad Request`: Invalid product ID, insufficient stock, or product not available
+- `404 Not Found`: Product not found or customer profile not found
+
+### Update Cart Item Quantity
+Update the quantity of a product in the cart.
+
+**Endpoint:** `PUT /cart/:productId`
+
+**Headers:** `Authorization: Bearer <token>`
+
+**Request Body:**
+```json
+{
+  "quantity": 3
+}
+```
+
+**Note:** Setting quantity to 0 will remove the item from cart.
+
+**Response:** `200 OK`
+```json
+{
+  "success": true,
+  "message": "Cart updated successfully",
+  "data": {
+    "customerId": "customer-uuid",
+    "items": [...],
+    "total": 2999.97,
+    "itemCount": 3,
+    "updatedAt": "2024-02-08T12:05:00Z"
+  }
+}
+```
+
+**Error Responses:**
+- `400 Bad Request`: Item not in cart, insufficient stock, or invalid quantity
+- `404 Not Found`: Customer profile not found
+
+### Remove Item from Cart
+Remove a specific product from the cart.
+
+**Endpoint:** `DELETE /cart/:productId`
+
+**Headers:** `Authorization: Bearer <token>`
+
+**Response:** `200 OK`
+```json
+{
+  "success": true,
+  "message": "Item removed from cart",
+  "data": {
+    "customerId": "customer-uuid",
+    "items": [],
+    "total": 0,
+    "itemCount": 0,
+    "updatedAt": "2024-02-08T12:10:00Z"
+  }
+}
+```
+
+**Error Responses:**
+- `404 Not Found`: Item not found in cart or customer profile not found
+
+### Clear Cart
+Remove all items from the cart.
+
+**Endpoint:** `DELETE /cart`
+
+**Headers:** `Authorization: Bearer <token>`
+
+**Response:** `200 OK`
+```json
+{
+  "success": true,
+  "message": "Cart cleared successfully",
+  "data": {
+    "customerId": "customer-uuid",
+    "items": [],
+    "total": 0,
+    "itemCount": 0,
+    "message": "Cart cleared successfully"
+  }
+}
+```
+
+### Get Cart Total
+Get a summary of the cart total and item counts.
+
+**Endpoint:** `GET /cart/total`
+
+**Headers:** `Authorization: Bearer <token>`
+
+**Response:** `200 OK`
+```json
+{
+  "success": true,
+  "data": {
+    "customerId": "customer-uuid",
+    "total": 1999.98,
+    "itemCount": 2,
+    "items": 1
+  }
+}
+```
+
+### Validate Cart
+Check if all items in cart are still available and in stock.
+
+**Endpoint:** `GET /cart/validate`
+
+**Headers:** `Authorization: Bearer <token>`
+
+**Response:** `200 OK`
+```json
+{
+  "success": true,
+  "data": {
+    "valid": true,
+    "issues": []
+  }
+}
+```
+
+**Response with Issues:**
+```json
+{
+  "success": true,
+  "data": {
+    "valid": false,
+    "issues": [
+      {
+        "productId": "product-uuid",
+        "productName": "Product Name",
+        "issue": "Insufficient stock. Only 5 available, but 10 requested",
+        "availableStock": 5,
+        "requestedQuantity": 10
+      },
+      {
+        "productId": "another-uuid",
+        "productName": "Another Product",
+        "issue": "Product is no longer available"
+      }
+    ]
+  }
+}
+```
+
+---
+
 ## Order Endpoints
 
 ### List User Orders

@@ -11,6 +11,7 @@ import productRoutes from './routes/product.routes';
 import orderRoutes from './routes/order.routes';
 import categoryRoutes from './routes/category.routes';
 import adminRoutes from './routes/admin.routes';
+import cartRoutes from './routes/cart.routes';
 
 // Load environment variables
 dotenv.config();
@@ -39,6 +40,7 @@ app.use('/api/products', productRoutes);
 app.use('/api/orders', orderRoutes);
 app.use('/api/categories', categoryRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/cart', cartRoutes);
 
 // Error handling
 app.use(errorHandler);
