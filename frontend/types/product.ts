@@ -13,11 +13,16 @@ export interface Product {
   stock: number;
   lowStockAlert: number;
   images: string[];
-  specifications?: any;
+  specifications?: Record<string, string | number>;
   countryOfOrigin: string;
   hsn?: string;
   weight?: number;
-  dimensions?: any;
+  dimensions?: {
+    length?: number;
+    width?: number;
+    height?: number;
+    unit?: string;
+  };
   status: 'DRAFT' | 'ACTIVE' | 'OUT_OF_STOCK' | 'DISCONTINUED';
   isFeatured: boolean;
   viewCount: number;

@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { useCart } from '@/context/CartContext';
+import { CONFIG } from '@/lib/config';
 
 export default function CartPage() {
   const { cart, removeFromCart, updateQuantity, clearCart, cartTotal, cartCount } = useCart();
@@ -29,8 +30,8 @@ export default function CartPage() {
     setShowClearConfirm(false);
   };
 
-  const deliveryCharge = cartTotal > 500 ? 0 : 50;
-  const tax = cartTotal * 0.18; // 18% GST
+  const deliveryCharge = cartTotal > CONFIG.FREE_DELIVERY_THRESHOLD ? 0 : CONFIG.DELIVERY_CHARGE;
+  const tax = cartTotal * CONFIG.GST_RATE;
   const finalTotal = cartTotal + deliveryCharge + tax;
 
   return (
@@ -211,11 +212,11 @@ export default function CartPage() {
                   </div>
                   {deliveryCharge > 0 && (
                     <p className="text-sm text-gray-600">
-                      Add ₹{(500 - cartTotal).toFixed(2)} more to get FREE delivery
+                      Add ₹{(CONFIG.FREE_DELIVERY_THRESHOLD - cartTotal).toFixed(2)} more to get FREE delivery
                     </p>
                   )}
                   <div className="flex justify-between text-gray-700">
-                    <span>GST (18%)</span>
+                    <span>GST ({Math.round(CONFIG.GST_RATE * 100)}%)</span>
                     <span>₹{tax.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
                   </div>
                 </div>

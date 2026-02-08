@@ -1,4 +1,6 @@
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+import { CONFIG } from './config';
+
+const API_BASE_URL = CONFIG.API_BASE_URL;
 
 export const api = {
   async getProducts(params?: {
