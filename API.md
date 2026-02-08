@@ -647,4 +647,457 @@ GET /products?sortBy=price&sortOrder=asc&minPrice=100&maxPrice=1000
 
 ---
 
+## Order Management Endpoints
+
+### Create Order from Cart
+Create a new order from the current cart items.
+
+**Endpoint:** `POST /orders`
+
+**Headers:** `Authorization: Bearer <token>`
+
+**Request Body:**
+```json
+{
+  "addressId": "address-uuid",
+  "paymentMethod": "COD"
+}
+```
+
+**Payment Methods:** `UPI`, `CARD`, `NETBANKING`, `WALLET`, `COD`
+
+**Response:** `201 Created`
+```json
+{
+  "success": true,
+  "message": "Order created successfully",
+  "data": {
+    "id": "order-uuid",
+    "userId": "user-uuid",
+    "orderNumber": "ORD24020800001",
+    "subtotal": 1999.98,
+    "deliveryCharge": 0,
+    "tax": 359.996,
+    "discount": 0,
+    "total": 2359.976,
+    "paymentMethod": "COD",
+    "paymentStatus": "PENDING",
+    "status": "PENDING",
+    "shippingAddress": {
+      "id": "address-uuid",
+      "fullName": "John Doe",
+      "phone": "9876543210",
+      "addressLine1": "123 Main St",
+      "city": "Mumbai",
+      "state": "Maharashtra",
+      "pincode": "400001",
+      "country": "India"
+    },
+    "items": [
+      {
+        "id": "order-item-uuid",
+        "productId": "product-uuid",
+        "quantity": 2,
+        "price": 999.99,
+        "tax": 179.998,
+        "subtotal": 1999.98,
+        "product": {
+          "id": "product-uuid",
+          "name": "Product Name",
+          "slug": "product-slug",
+          "images": ["image1.jpg"]
+        },
+        "seller": {
+          "id": "seller-uuid",
+          "businessName": "Seller Store",
+          "displayName": "Seller Store"
+        }
+      }
+    ],
+    "createdAt": "2024-02-08T12:00:00Z",
+    "updatedAt": "2024-02-08T12:00:00Z"
+  }
+}
+```
+
+**Error Responses:**
+- `400 Bad Request`: Cart is empty, cart validation failed, address not found, or insufficient stock
+- `401 Unauthorized`: Authentication required
+- `404 Not Found`: Customer profile not found
+
+**Notes:**
+- Cart is automatically cleared after successful order creation
+- Delivery charge is ₹50 for orders below ₹500, free for orders ₹500 and above
+- Tax is calculated at 18% GST on subtotal
+- Product stock is automatically reduced when order is created
+
+### Get Customer Orders
+Get list of orders for the authenticated customer.
+
+**Endpoint:** `GET /orders`
+
+**Headers:** `Authorization: Bearer <token>`
+
+**Query Parameters:**
+- `status` (optional): Filter by order status - `PENDING`, `CONFIRMED`, `PROCESSING`, `SHIPPED`, `DELIVERED`, `CANCELLED`, `REFUNDED`
+- `page` (optional, default: 1): Page number for pagination
+- `limit` (optional, default: 10): Number of orders per page
+- `sortBy` (optional, default: createdAt): Sort field - `createdAt`, `total`
+- `sortOrder` (optional, default: desc): Sort order - `asc`, `desc`
+
+**Example:** `GET /orders?status=PENDING&page=1&limit=10&sortBy=createdAt&sortOrder=desc`
+
+**Response:** `200 OK`
+```json
+{
+  "success": true,
+  "data": {
+    "orders": [
+      {
+        "id": "order-uuid",
+        "orderNumber": "ORD24020800001",
+        "status": "PENDING",
+        "paymentStatus": "PENDING",
+        "total": 2359.976,
+        "subtotal": 1999.98,
+        "deliveryCharge": 0,
+        "tax": 359.996,
+        "items": [
+          {
+            "id": "order-item-uuid",
+            "quantity": 2,
+            "price": 999.99,
+            "subtotal": 1999.98,
+            "product": {
+              "id": "product-uuid",
+              "name": "Product Name",
+              "slug": "product-slug",
+              "images": ["image1.jpg"],
+              "price": 999.99
+            },
+            "seller": {
+              "id": "seller-uuid",
+              "businessName": "Seller Store",
+              "displayName": "Seller Store"
+            }
+          }
+        ],
+        "shippingAddress": {
+          "fullName": "John Doe",
+          "city": "Mumbai",
+          "state": "Maharashtra"
+        },
+        "createdAt": "2024-02-08T12:00:00Z",
+        "updatedAt": "2024-02-08T12:00:00Z"
+      }
+    ],
+    "pagination": {
+      "page": 1,
+      "limit": 10,
+      "total": 5,
+      "totalPages": 1
+    }
+  }
+}
+```
+
+### Get Order Details
+Get detailed information about a specific order.
+
+**Endpoint:** `GET /orders/:id`
+
+**Headers:** `Authorization: Bearer <token>`
+
+**Response:** `200 OK`
+```json
+{
+  "success": true,
+  "data": {
+    "id": "order-uuid",
+    "userId": "user-uuid",
+    "orderNumber": "ORD24020800001",
+    "subtotal": 1999.98,
+    "deliveryCharge": 0,
+    "tax": 359.996,
+    "discount": 0,
+    "total": 2359.976,
+    "paymentMethod": "COD",
+    "paymentStatus": "PENDING",
+    "paymentId": null,
+    "status": "PENDING",
+    "deliveryPartner": null,
+    "trackingNumber": null,
+    "estimatedDelivery": null,
+    "deliveredAt": null,
+    "shippingAddress": {
+      "id": "address-uuid",
+      "fullName": "John Doe",
+      "phone": "9876543210",
+      "addressLine1": "123 Main St",
+      "addressLine2": null,
+      "landmark": "Near Park",
+      "city": "Mumbai",
+      "state": "Maharashtra",
+      "pincode": "400001",
+      "country": "India"
+    },
+    "billingAddress": {
+      "id": "address-uuid",
+      "fullName": "John Doe",
+      "phone": "9876543210",
+      "addressLine1": "123 Main St",
+      "city": "Mumbai",
+      "state": "Maharashtra",
+      "pincode": "400001"
+    },
+    "items": [
+      {
+        "id": "order-item-uuid",
+        "productId": "product-uuid",
+        "sellerId": "seller-uuid",
+        "quantity": 2,
+        "price": 999.99,
+        "discount": 0,
+        "tax": 179.998,
+        "subtotal": 1999.98,
+        "product": {
+          "id": "product-uuid",
+          "name": "Product Name",
+          "slug": "product-slug",
+          "images": ["image1.jpg"],
+          "price": 999.99,
+          "mrp": 1299.99
+        },
+        "seller": {
+          "id": "seller-uuid",
+          "businessName": "Seller Store",
+          "displayName": "Seller Store"
+        }
+      }
+    ],
+    "createdAt": "2024-02-08T12:00:00Z",
+    "updatedAt": "2024-02-08T12:00:00Z"
+  }
+}
+```
+
+**Error Responses:**
+- `404 Not Found`: Order not found or doesn't belong to the user
+- `401 Unauthorized`: Authentication required
+
+### Cancel Order
+Cancel a pending or confirmed order.
+
+**Endpoint:** `PUT /orders/:id/cancel`
+
+**Headers:** `Authorization: Bearer <token>`
+
+**Request Body:**
+```json
+{
+  "reason": "Changed my mind"
+}
+```
+
+**Response:** `200 OK`
+```json
+{
+  "success": true,
+  "message": "Order cancelled successfully",
+  "data": {
+    "id": "order-uuid",
+    "orderNumber": "ORD24020800001",
+    "status": "CANCELLED",
+    "items": [...]
+  }
+}
+```
+
+**Error Responses:**
+- `400 Bad Request`: Order cannot be cancelled (already shipped/delivered)
+- `404 Not Found`: Order not found
+- `401 Unauthorized`: Authentication required
+
+**Notes:**
+- Orders can only be cancelled if status is `PENDING` or `CONFIRMED`
+- Product stock is automatically restored when order is cancelled
+- Cancellation reason is optional
+
+### Update Order Status (Seller Only)
+Update the status of an order. Only sellers who have items in the order can update it.
+
+**Endpoint:** `PUT /orders/:id/status`
+
+**Headers:** `Authorization: Bearer <token>`
+
+**Authorization:** Required role - `SELLER` or `ADMIN`
+
+**Request Body:**
+```json
+{
+  "status": "CONFIRMED"
+}
+```
+
+**Valid Status Values:** `PENDING`, `CONFIRMED`, `PROCESSING`, `SHIPPED`, `DELIVERED`, `CANCELLED`, `REFUNDED`
+
+**Response:** `200 OK`
+```json
+{
+  "success": true,
+  "message": "Order status updated successfully",
+  "data": {
+    "id": "order-uuid",
+    "orderNumber": "ORD24020800001",
+    "status": "CONFIRMED",
+    "items": [...]
+  }
+}
+```
+
+**Status Transition Rules:**
+- `PENDING` → `CONFIRMED` or `CANCELLED`
+- `CONFIRMED` → `PROCESSING` or `CANCELLED`
+- `PROCESSING` → `SHIPPED` or `CANCELLED`
+- `SHIPPED` → `DELIVERED`
+- `DELIVERED` → (final state)
+- `CANCELLED` → (final state)
+- `REFUNDED` → (final state)
+
+**Error Responses:**
+- `400 Bad Request`: Invalid status transition or order not found
+- `403 Forbidden`: User is not a seller or seller doesn't have items in this order
+- `401 Unauthorized`: Authentication required
+
+### Get Seller Orders
+Get list of orders containing the seller's products.
+
+**Endpoint:** `GET /orders/seller/orders`
+
+**Headers:** `Authorization: Bearer <token>`
+
+**Authorization:** Required role - `SELLER` or `ADMIN`
+
+**Query Parameters:**
+- `status` (optional): Filter by order status
+- `page` (optional, default: 1): Page number
+- `limit` (optional, default: 10): Orders per page
+- `sortBy` (optional, default: createdAt): Sort field
+- `sortOrder` (optional, default: desc): Sort order
+- `dateFrom` (optional): Filter orders from date (ISO 8601 format)
+- `dateTo` (optional): Filter orders until date (ISO 8601 format)
+
+**Example:** `GET /orders/seller/orders?status=PENDING&page=1&limit=10&dateFrom=2024-02-01`
+
+**Response:** `200 OK`
+```json
+{
+  "success": true,
+  "data": {
+    "orders": [
+      {
+        "id": "order-uuid",
+        "orderNumber": "ORD24020800001",
+        "status": "PENDING",
+        "paymentStatus": "PENDING",
+        "total": 2359.976,
+        "sellerSubtotal": 1999.98,
+        "sellerTax": 179.998,
+        "sellerTotal": 2179.978,
+        "itemCount": 2,
+        "items": [
+          {
+            "id": "order-item-uuid",
+            "productId": "product-uuid",
+            "quantity": 2,
+            "price": 999.99,
+            "subtotal": 1999.98,
+            "tax": 179.998,
+            "product": {
+              "id": "product-uuid",
+              "name": "Product Name",
+              "slug": "product-slug",
+              "images": ["image1.jpg"]
+            }
+          }
+        ],
+        "shippingAddress": {
+          "fullName": "John Doe",
+          "phone": "9876543210",
+          "addressLine1": "123 Main St",
+          "city": "Mumbai",
+          "state": "Maharashtra",
+          "pincode": "400001"
+        },
+        "createdAt": "2024-02-08T12:00:00Z",
+        "updatedAt": "2024-02-08T12:00:00Z"
+      }
+    ],
+    "pagination": {
+      "page": 1,
+      "limit": 10,
+      "total": 15,
+      "totalPages": 2
+    }
+  }
+}
+```
+
+**Notes:**
+- Only shows orders containing the seller's products
+- `sellerSubtotal`, `sellerTax`, and `sellerTotal` show amounts specific to seller's items
+- Multi-vendor orders will appear in multiple sellers' order lists
+
+### Get Seller Analytics
+Get order analytics and statistics for the seller.
+
+**Endpoint:** `GET /orders/seller/analytics`
+
+**Headers:** `Authorization: Bearer <token>`
+
+**Authorization:** Required role - `SELLER` or `ADMIN`
+
+**Response:** `200 OK`
+```json
+{
+  "success": true,
+  "data": {
+    "totalOrders": 50,
+    "totalRevenue": 125000.50,
+    "averageOrderValue": 2500.01,
+    "recentOrders": 8,
+    "recentRevenue": 18500.00,
+    "statusCounts": {
+      "PENDING": 5,
+      "CONFIRMED": 3,
+      "PROCESSING": 7,
+      "SHIPPED": 10,
+      "DELIVERED": 20,
+      "CANCELLED": 5
+    },
+    "topProducts": [
+      {
+        "id": "product-uuid",
+        "name": "Product Name",
+        "slug": "product-slug",
+        "images": ["image1.jpg"],
+        "quantitySold": 150,
+        "revenue": 45000.00
+      }
+    ]
+  }
+}
+```
+
+**Analytics Metrics:**
+- `totalOrders`: Total number of orders containing seller's products
+- `totalRevenue`: Total revenue from all orders (seller's items only)
+- `averageOrderValue`: Average revenue per order
+- `recentOrders`: Number of orders in last 7 days
+- `recentRevenue`: Revenue from orders in last 7 days
+- `statusCounts`: Count of orders by status
+- `topProducts`: Top 5 products by revenue
+
+---
+
 For more details, see the source code in `backend/src/routes/` and `backend/src/controllers/`.
